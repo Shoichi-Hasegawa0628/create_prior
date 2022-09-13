@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+    <node name="create_prior" pkg="create_prior" type="create_prior.py" output="screen" cwd="node" />
+</launch>
