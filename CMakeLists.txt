@@ -4,4 +4,3 @@ project(create_prior)
 find_package(catkin REQUIRED COMPONENTS
 
 )
-

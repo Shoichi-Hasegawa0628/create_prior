@@ -9,12 +9,13 @@ from cv_bridge import CvBridge, CvBridgeError
 import os
 import csv
 import time
+from tqdm import tqdm
 
 # Third Party
 import numpy as np
 import rospy
-import message_filter
-from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import Image
+from std_msgs.msg import String
 
 # Self Modules
 from __init__ import *
@@ -29,47 +30,67 @@ class ObjectFeatureServer():
         self.Object_BOO = []
         self.cv_bridge = CvBridge()
         self.frame = 0
-        self.file_index = 1
-        self.img_pub = rospy.Publisher("/hsrb/head_rgbd_sensor/rgb/image_rect_color/compressed", CompressedImage)
-        self.index_pub = rospy.Publisher("/file_index", String)
+        self.file_index = 0
+        # self.img_pub = rospy.Publisher("/hsrb/head_rgbd_sensor/rgb/image_raw", Image, queue_size=1)
+        # self.index_pub = rospy.Publisher("/file_index", String, queue_size=1)
         rospy.loginfo("[Service spco_data/object] Ready")
 
         files = os.listdir("../data/image")
-        for i in range(len(files)):
+        for i in tqdm(range(len(files))):
             self.frame = cv2.imread("../data/image/{}.jpg".format(i + 1))
-            raw_img = self.cv_bridge.cv2_to_compressed_imgmsg(self.frame)
+
+            # h, w, _ = self.frame.shape
+            # if h % 32 != 0 or w % 32 != 0:
+            #     self.frame = cv2.resize(self.frame, dsize=(256, 256))
+            try:
+                self.frame = cv2.resize(self.frame, dsize=(416, 416))
+            except cv2.error as e:
+                self.file_index += 1
+                # self.read_data(i + 1)
+                print("step: {}".format(i + 1))
+                continue
+
+            raw_img = self.cv_bridge.cv2_to_imgmsg(self.frame, encoding="bgr8")
             self.object_server(i + 1, raw_img)
 
     def object_server(self, step, image):
-        if (os.path.exists("../data/tmp_boo/Object.csv") == True):
-            with open("../data/tmp_boo/Object.csv", 'r') as f:
-                reader = csv.reader(f)
-                self.object_list = [row for row in reader]
+        # if (os.path.exists("../data/tmp_boo/Object.csv") == True):
+        #     with open("../data/tmp_boo/Object.csv", 'r') as f:
+        #         reader = csv.reader(f)
+        #         self.object_list = [row for row in reader]
             # print("pre_object_list: {}\n".format(self.object_list))
 
-        timeout = time.time() + 10
-        while True:
-            self.index_pub.publish(self.file_index)
-            if time.time() > timeout:
-                break
 
-        timeout = time.time() + 30
-        while True:
-            self.img_pub.publish(image)
-            if time.time() > timeout:
-                break
-
-        time.sleep(10)
+        # timeout = time.time() + 3
+        # start = time.time()
+        # while True:
+        #     self.img_pub.publish(image)
+        #     print("Publish image: {}".format(str(time.time() - start)))
+        #     if time.time() > timeout:
+        #         break
+        #
+        self.file_index += 1
+        #
+        # timeout = time.time() + 3
+        # start = time.time()
+        # while True:
+        #     self.index_pub.publish(str(self.file_index))
+        #     print("Publish index: {}".format(str(time.time() - start)))
+        #     if time.time() > timeout:
+        #         break
 
         self.read_data(step)
-        self.file_index += 1
+
         return
 
     def extracting_label(self):
         object_list = []
-        for i in range(len(self.detect_object_info)):
-            object_list.append(self.detect_object_info[i].Class)
+        # print(self.detect_object_info[0])
+        for i in range(len(self.detect_object_info[0])):
             # print(object_list)
+            object_list.append(self.detect_object_info[0][i])
+            # print(object_list)
+        # print(self.object_list)
         self.object_list.append(object_list)
         # print(self.object_list)
         return
@@ -87,11 +108,11 @@ class ObjectFeatureServer():
         return
 
     def save_data(self, step):
-        # 全時刻の観測された物体のリストを保存
-        FilePath = "../data/tmp_boo/Object.csv"
-        with open(FilePath, 'w') as f:
-            writer = csv.writer(f)
-            writer.writerows(self.object_list)
+        # # 全時刻の観測された物体のリストを保存
+        # FilePath = "../data/tmp_boo/Object.csv"
+        # with open(FilePath, 'w') as f:
+        #     writer = csv.writer(f)
+        #     writer.writerows(self.object_list)
 
         # 教示ごとに観測された物体のリストを保存
         FilePath = "../data/tmp_boo/" + str(step) + "_Object.csv"
@@ -114,14 +135,14 @@ class ObjectFeatureServer():
         return
 
     def read_data(self, step):
-        if ((os.path.exists(path + "/{}.jpg".format(self.file_index)) != True) and (
-                os.path.exists(path + "/{}.csv".format(self.file_index)) != True)):
+        if (os.path.exists(path + "/{}.jpg".format(self.file_index)) != True
+             and os.path.exists(path + "/{}.csv".format(self.file_index)) != True):
             if step == 1:
                 # 最初の教示で物体が検出されなかったとき
                 self.object_list = [[]]
                 self.Object_BOO = [[0] * len(object_dictionary)]
                 self.save_data(step)
-                print("No object at the first step.")
+                # print("No object at the first step.")
                 return
 
             else:
@@ -130,12 +151,13 @@ class ObjectFeatureServer():
                 self.object_list.append(object_list)
                 self.make_object_boo()
                 self.save_data(step)
-                print("No object")
+                # print("No object")
                 return
 
         with open(path + "/{}.csv".format(self.file_index), 'r') as f:
             reader = csv.reader(f)
             self.detect_object_info = [row for row in reader]
+        print("Save object")
 
         self.extracting_label()
         self.make_object_boo()
@@ -146,4 +168,4 @@ class ObjectFeatureServer():
 if __name__ == '__main__':
     rospy.init_node('create_prior', anonymous=False)
     srv = ObjectFeatureServer()
-    rospy.spin()
+    # rospy.spin()
