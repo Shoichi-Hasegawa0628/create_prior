@@ -22,7 +22,7 @@ class SaverMultipleData():
     def __init__(self):
         self.cv_bridge = CvBridge()
         self.index_sub = rospy.Subscriber("/file_index", String, self.index_callback, queue_size=1)
-        self.sub1 = message_filters.Subscriber('/darknet_ros/bounding_boxes', BoundingBoxes, queue_size=1)
+        self.sub1 = message_filters.Subscriber('/yolov5_ros/output/bounding_boxes', BoundingBoxes, queue_size=1)
         self.sub2 = message_filters.Subscriber('/yolov5_ros/output/image/compressed', CompressedImage, queue_size=1)
 
         delay = 0.005
