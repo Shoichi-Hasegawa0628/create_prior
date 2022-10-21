@@ -9,6 +9,7 @@ from cv_bridge import CvBridge, CvBridgeError
 import os
 import csv
 import time
+import math
 
 # Third Party Library
 import numpy as np
@@ -26,6 +27,7 @@ path = "/root/HSR/catkin_ws/src/create_prior/data/output"
 yolo_width = 640
 yolo_height = 640
 
+
 class ObjectFeatureServer():
     def __init__(self):
         self.detect_object_info = []
@@ -34,38 +36,53 @@ class ObjectFeatureServer():
         self.cv_bridge = CvBridge()
         self.frame = 0
         self.file_index = 0
-        self.img_pub = rospy.Publisher("/hsrb/head_rgbd_sensor/rgb/image_rect_color/compressed", CompressedImage, queue_size=1)
+        self.img_pub = rospy.Publisher("/hsrb/head_rgbd_sensor/rgb/image_rect_color/compressed", CompressedImage,
+                                       queue_size=1)
         self.index_pub = rospy.Publisher("/file_index", String, queue_size=1)
         rospy.loginfo("[Service spco_data/object] Ready")
 
         files = os.listdir("../data/image")
         for i in tqdm(range(len(files))):
             self.frame = cv2.imread("../data/image/{}.jpg".format(i + 1))
-
-            # yolov5の入力画像サイズに収まるようにリサイズ
             img_height, img_width, channels = self.frame.shape[:3]
-            if img_width > yolo_width or img_height > yolo_height:
-                dst = self.scale_box(self.frame, 640, 640)
-                print(f"{self.frame.shape} -> {dst.shape}")
-                self.frame = dst
-                img_height, img_width, channels = self.frame.shape[:3]
-                # print("dst_width: " + str(img_width))
-                # print("dst_height: " + str(img_height))
 
-            # 640×640に合うように黒でパディング
-            diff_height = 0
-            diff_width = 0
-            if img_height != 640 or img_width != 640:
-                if yolo_height - img_height > 0:
-                    diff_height = yolo_height - img_height
-                if yolo_width - img_width > 0:
-                    diff_width = yolo_width - img_width
+            # 32の倍数になるように縦横を調整 (元画像の大きさにできるだけ近づける)
+            resize_height = img_height
+            resize_width = img_width
+            if img_width % 32 != 0 or img_height % 32 != 0:
+                width_rate = 1
+                height_rate = 1
+                if img_width % 32 != 0:
+                    width_rate = math.floor(img_width / 32)
+                    resize_width = 32 * width_rate
+                if img_height % 32 != 0:
+                    height_rate = math.floor(img_height / 32)
+                    resize_height = 32 * height_rate
+                self.frame = cv2.resize(self.frame, dsize=(resize_height, resize_width))
 
-                self.frame = cv2.copyMakeBorder(self.frame, 0, diff_height, 0, diff_width, cv2.BORDER_CONSTANT, (0, 0, 0))
-                # self.frame = cv2.copyMakeBorder(self.frame, 0, diff_height, 0, diff_width, cv2.BORDER_CONSTANT, (255, 255, 255))
-                # img_height, img_width, channels = img.shape[:3]
-                # print("img_pad_width: " + str(img_width))
-                # print("img_pad_dst_height: " + str(img_height))
+            # # yolov5の入力画像サイズに収まるようにリサイズ
+            # if img_width > yolo_width or img_height > yolo_height:
+            #     dst = self.scale_box(self.frame, 640, 640)
+            #     print(f"{self.frame.shape} -> {dst.shape}")
+            #     self.frame = dst
+            #     img_height, img_width, channels = self.frame.shape[:3]
+            #     # print("dst_width: " + str(img_width))
+            #     # print("dst_height: " + str(img_height))
+
+            # # 640×640に合うように黒でパディング
+            # diff_height = 0
+            # diff_width = 0
+            # if img_height != 640 or img_width != 640:
+            #     if yolo_height - img_height > 0:
+            #         diff_height = yolo_height - img_height
+            #     if yolo_width - img_width > 0:
+            #         diff_width = yolo_width - img_width
+            #
+            #     self.frame = cv2.copyMakeBorder(self.frame, 0, diff_height, 0, diff_width, cv2.BORDER_CONSTANT, (0, 0, 0))
+            #     # self.frame = cv2.copyMakeBorder(self.frame, 0, diff_height, 0, diff_width, cv2.BORDER_CONSTANT, (255, 255, 255))
+            #     # img_height, img_width, channels = img.shape[:3]
+            #     # print("img_pad_width: " + str(img_width))
+            #     # print("img_pad_dst_height: " + str(img_height))
 
             # # 1:1でない画像のみ行う処理, 値が大きい方を基準にし、片方を黒でパディング
             # diff_height = 0
@@ -87,7 +104,6 @@ class ObjectFeatureServer():
             #     print("step: {}".format(i + 1))
             #     continue
 
-
             # 使用する画像の保存
             cv2.imwrite("/root/HSR/catkin_ws/src/create_prior/data/conv_img/{}.jpg".format(i + 1), self.frame)
 
@@ -99,8 +115,7 @@ class ObjectFeatureServer():
         #     with open("../data/tmp_boo/Object.csv", 'r') as f:
         #         reader = csv.reader(f)
         #         self.object_list = [row for row in reader]
-            # print("pre_object_list: {}\n".format(self.object_list))
-
+        # print("pre_object_list: {}\n".format(self.object_list))
 
         timeout = time.time() + 3
         start = time.time()
@@ -175,7 +190,7 @@ class ObjectFeatureServer():
 
     def read_data(self, step):
         if (os.path.exists(path + "/{}.jpg".format(self.file_index)) != True
-             and os.path.exists(path + "/{}.csv".format(self.file_index)) != True):
+                and os.path.exists(path + "/{}.csv".format(self.file_index)) != True):
             if step == 1:
                 # 最初の教示で物体が検出されなかったとき
                 self.object_list = []
@@ -203,20 +218,20 @@ class ObjectFeatureServer():
         self.save_data(step)
         return
 
+    # def scale_box(self, img, width, height):
+    #     """指定した大きさに収まるように、アスペクト比を固定して、リサイズする。
+    #     """
+    #     h, w = img.shape[:2]
+    #     aspect = w / h
+    #     if width / height >= aspect:
+    #         nh = height
+    #         nw = round(nh * aspect)
+    #     else:
+    #         nw = width
+    #         nh = round(nw / aspect)
+    #     dst = cv2.resize(img, dsize=(nw, nh))
+    #     return dst
 
-    def scale_box(self, img, width, height):
-        """指定した大きさに収まるように、アスペクト比を固定して、リサイズする。
-        """
-        h, w = img.shape[:2]
-        aspect = w / h
-        if width / height >= aspect:
-            nh = height
-            nw = round(nh * aspect)
-        else:
-            nw = width
-            nh = round(nw / aspect)
-        dst = cv2.resize(img, dsize=(nw, nh))
-        return dst
 
 if __name__ == '__main__':
     rospy.init_node('create_prior', anonymous=False)

@@ -11,7 +11,7 @@ from __init__ import *
 data_path = '../data/tmp_boo/'
 # result_path = '../data/graph/living/'
 # result_path = '../data/graph/kitchen/'
-result_path = '../data/graph/bathroom/'
+# result_path = '../data/graph/bathroom/'
 # result_path = '../data/graph/bedroom/'
 
 files = len(glob.glob1("../data/tmp_boo/", "*_Object_BOO.csv"))
@@ -45,15 +45,16 @@ ax.set_xlim(1, len(object_dictionary))
 
 plt.xlabel("Object label index")
 plt.ylabel("The frequency of detected objects")
+ax.set_ylim(0, 300)
 
 # plt.show()
 list_file = ["png", "pdf", "svg", "eps"]
 
 for i in range(len(list_file)):
-    # fig.savefig("/root/HSR/frequency/living/living_hist_yolo9000_TC122.{}".format(list_file[i]))
-    # fig.savefig("/root/HSR/frequency/kitchen/kitchen_hist_yolo9000_TC122.{}".format(list_file[i]))
-    fig.savefig("/root/HSR/frequency/bathroom/bathroom_hist_yolo9000_TC122.{}".format(list_file[i]))
-    # fig.savefig("/root/HSR/frequency/bedroom/bedroom_hist_yolo9000_TC122.{}".format(list_file[i]))
+    # fig.savefig("/root/HSR/frequency/living/living_hist_yolov5_ISRD.{}".format(list_file[i]))
+    # fig.savefig("/root/HSR/frequency/kitchen/kitchen_hist_yolov5_ISRD.{}".format(list_file[i]))
+    # fig.savefig("/root/HSR/frequency/bathroom/bathroom_hist_yolov5_ISRD.{}".format(list_file[i]))
+    fig.savefig("/root/HSR/frequency/bedroom/bedroom_hist_yolov5_ISRD.{}".format(list_file[i]))
 
 # fig.savefig("/root/HSR/frequency/living/living_hist_yolo9000_ISRD.png")
 # fig.savefig("/root/HSR/frequency/living/living_hist_yolo9000_ISRD.pdf")

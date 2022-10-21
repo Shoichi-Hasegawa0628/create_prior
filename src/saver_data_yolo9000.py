@@ -41,7 +41,7 @@ class SaverMultipleData():
         print(object_list)
 
         # 検出画像の確保
-        detect_img = self.cv_bridge.imgmsg_to_cv2(img, "bgr8")
+        detect_img = self.cv_bridge.imgmsg_to_cv2(img, "rgb8")
         self.save_data(detect_img, object_list)
 
 

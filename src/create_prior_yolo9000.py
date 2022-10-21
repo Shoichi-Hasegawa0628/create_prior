@@ -10,6 +10,7 @@ import os
 import csv
 import time
 from tqdm import tqdm
+import math
 
 # Third Party
 import numpy as np
@@ -35,6 +36,26 @@ class ObjectFeatureServer():
         self.index_pub = rospy.Publisher("/file_index", String, queue_size=1)
         rospy.loginfo("[Service spco_data/object] Ready")
 
+        # files = os.listdir("../data/image")
+        # for i in tqdm(range(len(files))):
+        #     self.frame = cv2.imread("../data/image/{}.jpg".format(i + 1))
+        #     img_height, img_width, channels = self.frame.shape[:3]
+        #
+        #     # 32の倍数になるように縦横を調整 (元画像の大きさにできるだけ近づける)
+        #     resize_height = img_height
+        #     resize_width = img_width
+        #     if img_width % 32 != 0 or img_height % 32 != 0:
+        #         width_rate = 1
+        #         height_rate = 1
+        #         if img_width % 32 != 0:
+        #             width_rate = math.floor(img_width / 32)
+        #             resize_width = 32 * width_rate
+        #         if img_height % 32 != 0:
+        #             height_rate = math.floor(img_height / 32)
+        #             resize_height = 32 * height_rate
+        #         self.frame = cv2.resize(self.frame, dsize=(resize_height, resize_width))
+
+
         files = os.listdir("../data/image")
         for i in tqdm(range(len(files))):
             self.frame = cv2.imread("../data/image/{}.jpg".format(i + 1))
@@ -46,6 +67,8 @@ class ObjectFeatureServer():
                 # self.read_data(i + 1)
                 print("step: {}".format(i + 1))
                 continue
+
+            cv2.imwrite("/root/HSR/catkin_ws/src/create_prior/data/conv_img/{}.jpg".format(i + 1), self.frame)
 
             raw_img = self.cv_bridge.cv2_to_imgmsg(self.frame, encoding="bgr8")
             self.object_server(i + 1, raw_img)
@@ -93,11 +116,11 @@ class ObjectFeatureServer():
 
     def make_object_boo(self):
         # print(self.object_list)
-        self.Object_BOO = [0 for i in range(len(object_dictionary))]
+        self.Object_BOO = [0 for i in range(len(yolo9000_object_dictionary))]
         # print(self.Object_BOO)
         for j in range(len(self.object_list)):
-            for i in range(len(object_dictionary)):
-                if object_dictionary[i] == self.object_list[j]:
+            for i in range(len(yolo9000_object_dictionary)):
+                if yolo9000_object_dictionary[i] == self.object_list[j]:
                     self.Object_BOO[i] = self.Object_BOO[i] + 1
         # print(self.Object_BOO)
         return
@@ -125,7 +148,7 @@ class ObjectFeatureServer():
         FilePath = "../data/tmp_boo/" + str(step) + "_Object_W_list.csv"
         with open(FilePath, 'w') as f:
             writer = csv.writer(f, lineterminator='\n')
-            writer.writerow(object_dictionary)
+            writer.writerow(yolo9000_object_dictionary)
 
         return
 
@@ -135,7 +158,7 @@ class ObjectFeatureServer():
             if step == 1:
                 # 最初の教示で物体が検出されなかったとき
                 self.object_list = []
-                self.Object_BOO = [0] * len(object_dictionary)
+                self.Object_BOO = [0] * len(yolo9000_object_dictionary)
                 self.save_data(step)
                 print("No object at the first step.")
                 return

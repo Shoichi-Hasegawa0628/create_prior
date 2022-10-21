@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import yaml
+# import yaml
 import wordnet_jp
 import glob
 import csv
 import numpy as np
+
+from __init__ import *
 
 def has_duplicates(seq):
     return len(seq) != len(set(seq))
@@ -13,10 +15,10 @@ def has_duplicates(seq):
 data_path = '../data/finish_tmp/'
 files = len(glob.glob1("../data/finish_tmp/", "*_Object_BOO.csv"))
 
-with open('./yolo9000.yaml', 'r') as yml:
-    config = yaml.load(yml)
-
-object_dictionary = config['yolo_model']['detection_classes']['names']
+# with open('./yolo9000.yaml', 'r') as yml:
+#     config = yaml.load(yml)
+#
+# object_dictionary = config['yolo_model']['detection_classes']['names']
 # print("YOLO9000のラベル数：{}".format(len(object_dictionary))) # yolo9000のラベル数は9418
 
 sum = 0

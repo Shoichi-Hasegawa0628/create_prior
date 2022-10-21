@@ -7,11 +7,17 @@ import sqlite3
 
 
 
-with open('./yolo9000.yaml', 'r') as yml:
+# with open('./yolo9000.yaml', 'r') as yml:
+#     config = yaml.load(yml)
+#
+# object_dictionary = config['yolo_model']['detection_classes']['names']
+# print("YOLO9000のラベル数：{}".format(len(object_dictionary))) # yolo9000のラベル数は9418
+
+with open('./Objects365.yaml', 'r') as yml:
     config = yaml.load(yml)
 
-object_dictionary = config['yolo_model']['detection_classes']['names']
-print("YOLO9000のラベル数：{}".format(len(object_dictionary))) # yolo9000のラベル数は9418
+object_dictionary = config['names']
+print("YOLOv5のラベル数：{}".format(len(object_dictionary)))
 
 # WordNetデータの内容の確認
 # sqlite_masterという表から、nameという列のデータを取得
